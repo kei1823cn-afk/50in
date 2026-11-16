@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>五十音學習</title>
+<style>
+:root{--bg:#faf7f2;--card:#fff;--ink:#2b2622;--mute:#7a7068;--acc:#c8403a;--line:#e6ded3;--accbg:#fbe9e7;--ok:#2e7d4f;--okbg:#e3f3e9;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#171412;--card:#221e1b;--ink:#f1ebe4;--mute:#a79d93;--acc:#ef7a72;--line:#3a332e;--accbg:#3a2220;--ok:#6fcf97;--okbg:#1f3328}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#171412;--card:#221e1b;--ink:#f1ebe4;--mute:#a79d93;--acc:#ef7a72;--line:#3a332e;--accbg:#3a2220;--ok:#6fcf97;--okbg:#1f3328}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+.jp{font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif}
+.wrap{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}
+.sub{color:var(--mute);margin:0 0 14px;font-size:14px}
+.row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.tabs{display:flex;gap:6px}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
+button:active{transform:scale(.97)}
+.tab{flex:1;text-align:center}
+.on,.tab.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.seg{display:flex;gap:0}.seg button{border-radius:0}.seg button:first-child{border-radius:10px 0 0 10px}.seg button:last-child{border-radius:0 10px 10px 0}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;line-height:1.2}
+.cell b{font-size:clamp(22px,7vw,34px);font-weight:500}
+.cell small{color:var(--mute);font-size:12px}
+.cell.empty{visibility:hidden}
+.cell.sel{border-color:var(--acc);background:var(--accbg)}
+.detail{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:12px;min-height:72px}
+.detail .bigk{font-size:56px;line-height:1}
+.rom{font-size:22px;font-weight:600}
+.tip{color:var(--mute);font-size:14px}
+.big{font-size:88px;text-align:center;line-height:1.2;margin:8px 0}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts button{font-size:24px;padding:14px}
+.opts .ok{background:var(--okbg);border-color:var(--ok)}
+.opts .bad{background:var(--accbg);border-color:var(--acc)}
+.center{text-align:center}
+.pad{position:relative;width:min(100%,360px);aspect-ratio:1;margin:0 auto 8px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+background-image:linear-gradient(to right,transparent calc(50% - .5px),var(--line) calc(50% - .5px),var(--line) calc(50% + .5px),transparent calc(50% + .5px)),linear-gradient(to bottom,transparent calc(50% - .5px),var(--line) calc(50% - .5px),var(--line) calc(50% + .5px),transparent calc(50% + .5px))}
+.ghost{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink);pointer-events:none;transition:opacity .2s}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.stage{color:var(--mute);font-size:14px;margin:0 0 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>五十音學習 🎌</h1>
+  <p class="sub">先認識發音，再練習手寫，一步一步來。</p>
+  <div class="tabs row" id="tabs">
+    <button class="tab" data-a="tab" data-v="learn">① 認識發音</button>
+    <button class="tab" data-a="tab" data-v="quiz">② 測驗</button>
+    <button class="tab" data-a="tab" data-v="write">③ 手寫練習</button>
+  </div>
+  <div class="row"><div class="seg" id="kind">
+    <button data-a="kind" data-v="h">平假名</button><button data-a="kind" data-v="k">片假名</button>
+  </div></div>
+  <div id="view"></div>
+</div>
+<script>
+const Hs="あ い う え お|か き く け こ|さ し す せ そ|た ち つ て と|な に ぬ ね の|は ひ ふ へ ほ|ま み む め も|や _ ゆ _ よ|ら り る れ ろ|わ _ _ _ を|ん _ _ _ _".split("|").map(r=>r.split(" "));
+const Rs="a i u e o|ka ki ku ke ko|sa shi su se so|ta chi tsu te to|na ni nu ne no|ha hi fu he ho|ma mi mu me mo|ya _ yu _ yo|ra ri ru re ro|wa _ _ _ wo|n _ _ _ _".split("|").map(r=>r.split(" "));
+const tips={shi:"接近中文「西」",chi:"接近中文「七」",tsu:"類似「ㄘ」加 u，嘴型扁平",fu:"雙唇輕輕吹氣，介於 f 與 h",wo:"發音和「お」(o) 相同，多用作助詞",n:"鼻音，像「恩」",ra:"舌尖輕彈，介於 l 與 r",ri:"舌尖輕彈，介於 l 與 r",ru:"舌尖輕彈，介於 l 與 r",re:"舌尖輕彈，介於 l 與 r",ro:"舌尖輕彈，介於 l 與 r",ha:"當助詞時讀作 wa",he:"當助詞時讀作 e",u:"嘴唇不用太圓，比中文「烏」更放鬆"};
+const items=[];Hs.forEach((row,i)=>row.forEach((h,j)=>{if(h!=="_")items.push({h,r:Rs[i][j]})}));
+const S={tab:"learn",kind:"h",sel:null,qt:"see",q:null,score:0,total:0,w:0,ghost:true};
+const K=h=>S.kind==="k"?String.fromCharCode(h.charCodeAt(0)+96):h;
+const $=s=>document.querySelector(s);
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+let ctx=null,cvEl=null,lastW=0;
+
+function speak(h){
+  if(!("speechSynthesis" in window))return;
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(h);u.lang="ja-JP";u.rate=.7;
+  const v=speechSynthesis.getVoices().find(v=>v.lang&&v.lang.replace("_","-").startsWith("ja"));if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}
+}
+function newQ(){
+  let it;do{it=items[Math.random()*items.length|0]}while(S.q&&it===S.q.it);
+  const others=shuffle(items.filter(x=>x!==it)).slice(0,3);
+  S.q={it,opts:shuffle([it,...others]),done:false};
+  if(S.qt==="hear")speak(it.h);
+}
+function learnView(){
+  const d=S.sel?`<div class="detail"><div class="bigk jp">${K(S.sel.h)}</div><div style="flex:1"><div class="rom">${S.sel.r}</div><div class="tip">${tips[S.sel.r]||"&nbsp;"}</div></div><button data-a="say">🔊</button></div>`
+  :`<div class="detail"><div class="tip">點選任何一格，聽聽看它的發音。</div></div>`;
+  let g="";Hs.forEach((row,i)=>row.forEach((h,j)=>{
+    if(h==="_")g+=`<div class="cell empty"></div>`;
+    else g+=`<button class="cell jp${S.sel&&S.sel.h===h?" sel":""}" data-a="cell" data-v="${h}"><b>${K(h)}</b><small>${Rs[i][j]}</small></button>`}));
+  return `<p class="stage">階段一：先聽、先認，不用急著寫。</p>${d}<div class="grid">${g}</div>`;
+}
+function quizView(){
+  if(!S.q)newQ();
+  const q=S.q,see=S.qt==="see";
+  const head=see?`<div class="big jp">${K(q.it.h)}</div>`:`<div class="center" style="margin:16px 0"><button data-a="say" style="font-size:40px;padding:14px 28px">🔊</button></div>`;
+  const o=q.opts.map((x,i)=>`<button class="${see?"":"jp"}" data-a="opt" data-v="${i}">${see?x.r:K(x.h)}</button>`).join("");
+  return `<p class="stage">階段二：看字選發音，或聽音選字。</p>
+  <div class="row"><div class="seg"><button class="${see?"on":""}" data-a="qt" data-v="see">看字選音</button><button class="${see?"":"on"}" data-a="qt" data-v="hear">聽音選字</button></div>
+  <span class="tip" style="margin-left:auto">答對 ${S.score} / ${S.total}</span></div>${head}<div class="opts">${o}</div>`;
+}
+function writeView(){
+  return `<p class="stage">階段三：照著淺色字描寫，熟了就隱藏範例默寫。</p>
+  <div class="pad" id="pad"><div class="ghost jp" id="ghost"></div><canvas id="cv"></canvas></div>
+  <div class="center"><span class="rom" id="wr"></span> <span class="tip" id="wn"></span></div>
+  <div class="row" style="justify-content:center;margin-top:10px">
+    <button data-a="prev">◀ 上一個</button><button data-a="next">下一個 ▶</button><button data-a="rand">🔀 隨機</button></div>
+  <div class="row" style="justify-content:center">
+    <button data-a="say">🔊 聽發音</button><button data-a="ghost" id="gb"></button><button data-a="clear">🧽 清除</button></div>`;
+}
+function setupPad(){
+  const pad=$("#pad"),cv=$("#cv"),dpr=window.devicePixelRatio||1,w=pad.clientWidth;lastW=w;
+  cv.width=cv.height=Math.round(w*dpr);cvEl=cv;ctx=cv.getContext("2d");
+  ctx.lineCap=ctx.lineJoin="round";ctx.lineWidth=cv.width/24;
+  ctx.strokeStyle=ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()||"#222";
+  $("#ghost").style.fontSize=(w*.7)+"px";
+  let d=false,lx=0,ly=0;
+  const p=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height]};
+  cv.onpointerdown=e=>{d=true;cv.setPointerCapture(e.pointerId);[lx,ly]=p(e);ctx.beginPath();ctx.arc(lx,ly,ctx.lineWidth/2,0,7);ctx.fill()};
+  cv.onpointermove=e=>{if(!d)return;const[x,y]=p(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();lx=x;ly=y};
+  cv.onpointerup=cv.onpointercancel=()=>{d=false};
+  showChar();
+}
+function showChar(){
+  const it=items[S.w];
+  $("#ghost").textContent=K(it.h);$("#ghost").style.opacity=S.ghost?.16:0;
+  $("#wr").textContent=it.r;$("#wn").textContent=`(${S.w+1} / ${items.length})`;
+  $("#gb").textContent=S.ghost?"🙈 隱藏範例":"👀 顯示範例";
+  if(ctx)ctx.clearRect(0,0,cvEl.width,cvEl.height);
+}
+function render(){
+  document.querySelectorAll("#tabs .tab").forEach(b=>b.classList.toggle("on",b.dataset.v===S.tab));
+  document.querySelectorAll("#kind button").forEach(b=>b.classList.toggle("on",b.dataset.v===S.kind));
+  $("#view").innerHTML=({learn:learnView,quiz:quizView,write:writeView})[S.tab]();
+  if(S.tab==="write")setupPad();
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;
+  const a=b.dataset.a,v=b.dataset.v;
+  if(a==="tab"){S.tab=v;if(v==="quiz")S.q=null;render()}
+  else if(a==="kind"){S.kind=v;render()}
+  else if(a==="cell"){S.sel=items.find(x=>x.h===v);speak(v);render()}
+  else if(a==="say"){const h=S.tab==="learn"&&S.sel?S.sel.h:S.tab==="quiz"&&S.q?S.q.it.h:items[S.w].h;speak(h)}
+  else if(a==="qt"){S.qt=v;S.q=null;render()}
+  else if(a==="opt"){
+    if(S.q.done)return;S.q.done=true;S.total++;
+    const pick=S.q.opts[+v],good=pick===S.q.it;if(good)S.score++;
+    const bs=document.querySelectorAll(".opts button");
+    bs.forEach((x,i)=>{if(S.q.opts[i]===S.q.it)x.classList.add("ok")});
+    if(!good)b.classList.add("bad");
+    if(S.qt==="see")speak(S.q.it.h);
+    setTimeout(()=>{newQ();render()},1000);
+  }
+  else if(a==="next"){S.w=(S.w+1)%items.length;showChar()}
+  else if(a==="prev"){S.w=(S.w+items.length-1)%items.length;showChar()}
+  else if(a==="rand"){S.w=Math.random()*items.length|0;showChar()}
+  else if(a==="clear"){ctx&&ctx.clearRect(0,0,cvEl.width,cvEl.height)}
+  else if(a==="ghost"){S.ghost=!S.ghost;showChar()}
+});
+window.addEventListener("resize",()=>{if(S.tab==="write"&&$("#pad")&&$("#pad").clientWidth!==lastW)render()});
+render();
+</script>
+</body>
+</html>
